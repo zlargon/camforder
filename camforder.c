@@ -1,18 +1,6 @@
-#include <pthread.h>
-#include <signal.h>
-#include <time.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
-#include <ctype.h>
-#include <sys/un.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/un.h>
-#include <net/if_arp.h>
-#include <net/if.h>
 #include <netdb.h>
 #include <unistd.h>
 

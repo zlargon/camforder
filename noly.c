@@ -1,23 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <ctype.h>
-#include <sys/un.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/un.h>
-
-#ifndef __IOS__
-#include <net/if_arp.h>
-#endif
 #include <netinet/tcp.h>
-
-#include <net/if.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/stat.h>
 
 void noly_set_tcp_nodelay(int sk) {
     int enable = 1;
