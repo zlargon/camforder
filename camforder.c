@@ -15,6 +15,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include "easyssl.h"
 #include "log.h"
 
 static char prog_arg[] = "s:p:h:o:d:l:u:";
@@ -33,8 +34,10 @@ struct cvr_setting{
 	struct sockaddr_in maddr;
 	int 		ipcam_status;
 	int 		server_status;
+    EASYSSL     *ssl;
 };
 static struct cvr_setting cvr;
+
 void send_http_post(int fd)
 {
 	char http_post[1024];
@@ -51,7 +54,8 @@ void send_http_post(int fd)
 	char *ptr = http_post + tlen;
 	memcpy(ptr, body, len);
 	printf("%s\n", http_post);
-	send(fd, http_post , len + tlen ,0);
+	//send(fd, http_post , len + tlen ,0);
+    easyssl_send(cvr.ssl, http_post, len+tlen, 0);
 }
 
 
@@ -112,7 +116,9 @@ int disconnect_ipcam(struct cvr_setting *config)
 }
 int connect_server(struct cvr_setting *config)
 {
-	config->server_fd =  noly_tcp_connect(config->server_addr, config->server_port);
+	//config->server_fd =  noly_tcp_connect(config->server_addr, config->server_port);
+    easyssl_connect(cvr.ssl, config->server_addr, config->server_port);
+    config->server_fd = cvr.ssl->fd;
 	if(config->server_fd > 0){
 		LOG(LOG_INFO, "Connected to CVR server\n");
 		config->server_status;
@@ -173,11 +179,13 @@ void *run(void *data)
 				memset(buf, 0,  4096);
 				int len = recv(config->ipcam_fd, buf, 4096, 0);
 				//LOG(LOG_DEBUG, "Read from ipcam %d bytes:\n%s\n", len, buf);
-				send(config->server_fd, buf, len, 0);
+				//send(config->server_fd, buf, len, 0);
+                easyssl_send(cvr.ssl, buf, len, 0);
 			}
 			if(FD_ISSET(config->server_fd, &fs)){
 				memset(buf, 0,  4096);
-				int len = recv(config->server_fd, buf, 4096, 0);
+				//int len = recv(config->server_fd, buf, 4096, 0);
+                int len = easyssl_recv(cvr.ssl, buf, 4096, 0);
 				//LOG(LOG_DEBUG, "Read from server %d bytes:\n%s\n", len, buf);
 				send(config->ipcam_fd, buf, len, 0);
 				//read from ipcam
@@ -192,6 +200,12 @@ int main(int argc, char *argv[])
 	char param;
 	memset(&cvr, 0, sizeof(cvr));
 	LOG(LOG_INFO,"Start camforder...\n");
+    cvr.ssl = easyssl_new();
+    if(!cvr.ssl){
+        printf("===== ssl is NULL ======\n");
+    }else{
+        printf("===== ssl is not NULL ======\n");
+    }
 	while((param = getopt(argc, argv, prog_arg))!= -1){
 		switch(param)
 		{

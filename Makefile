@@ -1,7 +1,7 @@
 
 #CFLAGS= -Wall -Werror
-#LDFLAGS= -luv
-OBJS=camforder.o log.o noly.o
+LDFLAGS= -lssl
+OBJS=camforder.o log.o noly.o easyssl.o
 EXEC= camforder.exe
 
 all: $(OBJS)
