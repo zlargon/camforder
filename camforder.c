@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <sys/un.h>
@@ -15,6 +16,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include "noly.h"
 #include "log.h"
 
 static char prog_arg[] = "s:p:h:o:d:l:u:";
@@ -97,7 +99,7 @@ int connect_ipcam(struct cvr_setting *config)
 	config->ipcam_fd =  noly_tcp_connect(config->ipcam_addr, config->ipcam_port);
 	if(config->ipcam_fd > 0){
 		LOG(LOG_INFO, "Connected to IPCAM\n");
-		config->ipcam_status;
+		// config->ipcam_status;
 		return 0;
 	}
 	LOG(LOG_ERROR, "Connect to IPCAM failure\n");
@@ -109,13 +111,15 @@ int disconnect_ipcam(struct cvr_setting *config)
 	if(config->ipcam_fd > 0){
 		close(config->ipcam_fd);
 	}
+	return 0;
 }
+
 int connect_server(struct cvr_setting *config)
 {
 	config->server_fd =  noly_tcp_connect(config->server_addr, config->server_port);
 	if(config->server_fd > 0){
 		LOG(LOG_INFO, "Connected to CVR server\n");
-		config->server_status;
+		// config->server_status;
 		return 0;
 	}
 	LOG(LOG_ERROR, "Connect to CVR server failure\n");
@@ -127,6 +131,7 @@ int disconnect_server(struct cvr_setting *config)
 	if(config->server_fd > 0){
 		close(config->server_fd);
 	}
+	return 0;
 }
 
 void *run(void *data)

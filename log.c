@@ -37,7 +37,7 @@ static char *print_time()
     nowtm = localtime(&now);
     char timebuf[32];
     strftime(timebuf, 32, "%Y-%m-%d %H:%M:%S", nowtm);
-    snprintf(curr_time, 32, "%s %06ld",timebuf, tv.tv_usec);
+    snprintf(curr_time, 32, "%s %06ld",timebuf, (long) tv.tv_usec);
     return curr_time;
 }
 static int log_open_file()
@@ -83,4 +83,3 @@ void log_print(int level, char *file, int line, char *fmt, ...)
         fprintf(log_fp, "%s %s ( %s:%d ) %s", print_lv_text(level, 0), print_time(), file, line, buf);
     }
 }
-

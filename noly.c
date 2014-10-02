@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <sys/un.h>
@@ -39,4 +40,3 @@ int noly_tcp_connect(char *ip, int port)
 	if(ret == 0) return sk;
 	return -1;
 }
-
