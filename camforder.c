@@ -7,8 +7,6 @@
 #include "noly.h"
 #include "log.h"
 
-static char prog_arg[] = "s:p:h:o:d:l:u:";
-
 struct cvr_setting {
     int                 server_fd;
     char                server_addr[32];
@@ -181,7 +179,7 @@ int main(int argc, char *argv[]) {
     memset(&cvr, 0, sizeof(cvr));
 
     char param;
-    while ((param = getopt(argc, argv, prog_arg)) != -1) {
+    while ((param = getopt(argc, argv, "s:p:h:o:d:l:u:")) != -1) {
         switch (param) {
             case 's':
                 strncpy(cvr.server_addr, optarg, 32);
