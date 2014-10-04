@@ -25,8 +25,6 @@ struct cvr_setting {
     int                 server_status;
 };
 
-static struct cvr_setting cvr;
-
 void send_http_post(struct cvr_setting *setting) {
     char http_post[1024];
     char body[256];
@@ -177,9 +175,12 @@ void *run(void *data) {
 }
 
 int main(int argc, char *argv[]) {
-    char param;
+    LOG(LOG_INFO, "Start camforder...\n");
+
+    struct cvr_setting cvr;
     memset(&cvr, 0, sizeof(cvr));
-    LOG(LOG_INFO,"Start camforder...\n");
+
+    char param;
     while ((param = getopt(argc, argv, prog_arg)) != -1) {
         switch (param) {
             case 's':
