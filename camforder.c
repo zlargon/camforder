@@ -7,7 +7,7 @@
 #include "noly.h"
 #include "log.h"
 
-struct cvr_setting {
+typedef struct {
     int                 server_fd;
     char                server_addr[32];
     int                 server_port;
@@ -21,12 +21,12 @@ struct cvr_setting {
     struct sockaddr_in  maddr;
     int                 ipcam_status;
     int                 server_status;
-};
+} CVR;
 
-void send_http_post(struct cvr_setting *setting) {
+void send_http_post(CVR *cvr) {
     char http_post[1024];
     char body[256];
-    int len = sprintf(body, "HOST=%s&PORT=%d&PATH=%s&ID=%s&UID=%s", setting->ipcam_addr, setting->ipcam_port, setting->rtsp_path, setting->device_id, setting->uid);
+    int len = sprintf(body, "HOST=%s&PORT=%d&PATH=%s&ID=%s&UID=%s", cvr->ipcam_addr, cvr->ipcam_port, cvr->rtsp_path, cvr->device_id, cvr->uid);
     printf("%s\n", body);
     int tlen = sprintf(http_post, "POST /info HTTP/1.0\r\nCSeq: 1\r\nUser-Agent: Camforder\r\n"
             "x-sessioncookie: d4db051ca2ceb40be4c2958\r\n"
@@ -38,33 +38,33 @@ void send_http_post(struct cvr_setting *setting) {
     char *ptr = http_post + tlen;
     memcpy(ptr, body, len);
     printf("%s\n", http_post);
-    send(setting->server_fd, http_post, len + tlen, 0);
+    send(cvr->server_fd, http_post, len + tlen, 0);
 }
 
-int config_checking(struct cvr_setting *setting) {
+int config_checking(CVR *cvr) {
     int ret = 0;
-    if (strlen(setting->server_addr) == 0) {
+    if (strlen(cvr->server_addr) == 0) {
         LOG(LOG_ERROR, "Server address should not empty\n");
         ret = -1;
     }
-    if (setting->server_port == 0 || setting->server_port > 65534) {
+    if (cvr->server_port == 0 || cvr->server_port > 65534) {
         LOG(LOG_ERROR, "Server port out of range\n");
         ret = -1;
     }
-    if (strlen(setting->ipcam_addr) == 0) {
+    if (strlen(cvr->ipcam_addr) == 0) {
         LOG(LOG_ERROR, "Media address should not empty\n");
         ret = -1;
     }
-    if (setting->ipcam_port == 0 || setting->ipcam_port > 65534) {
+    if (cvr->ipcam_port == 0 || cvr->ipcam_port > 65534) {
         LOG(LOG_ERROR, "Media port out of range\n");
         ret = -1;
     }
     return ret;
 }
 
-void dump_config(struct cvr_setting *setting) {
-    LOG(LOG_INFO, "Connect to CVR server %s:%d\n", setting->server_addr, setting->server_port);
-    LOG(LOG_INFO, "Connect to ipcam server rtsp://%s:%d/%s\n", setting->ipcam_addr, setting->ipcam_port, setting->rtsp_path);
+void dump_config(CVR *cvr) {
+    LOG(LOG_INFO, "Connect to CVR server %s:%d\n", cvr->server_addr, cvr->server_port);
+    LOG(LOG_INFO, "Connect to ipcam server rtsp://%s:%d/%s\n", cvr->ipcam_addr, cvr->ipcam_port, cvr->rtsp_path);
 }
 
 void print_usage(char *prog) {
@@ -77,47 +77,47 @@ void print_usage(char *prog) {
     printf("-l  the RTSP path\n");
 }
 
-int connect_ipcam(struct cvr_setting *config) {
-    config->ipcam_fd = noly_tcp_connect(config->ipcam_addr, config->ipcam_port);
-    if (config->ipcam_fd > 0) {
+int connect_ipcam(CVR *cvr) {
+    cvr->ipcam_fd = noly_tcp_connect(cvr->ipcam_addr, cvr->ipcam_port);
+    if (cvr->ipcam_fd > 0) {
         LOG(LOG_INFO, "Connected to IPCAM\n");
-        // config->ipcam_status;
+        // cvr->ipcam_status;
         return 0;
     }
     LOG(LOG_ERROR, "Connect to IPCAM failure\n");
     return -1;
 }
 
-int disconnect_ipcam(struct cvr_setting *config) {
-    if (config->ipcam_fd > 0) {
-        close(config->ipcam_fd);
+int disconnect_ipcam(CVR *cvr) {
+    if (cvr->ipcam_fd > 0) {
+        close(cvr->ipcam_fd);
     }
     return 0;
 }
 
-int connect_server(struct cvr_setting *config) {
-    config->server_fd = noly_tcp_connect(config->server_addr, config->server_port);
-    if (config->server_fd > 0) {
+int connect_server(CVR *cvr) {
+    cvr->server_fd = noly_tcp_connect(cvr->server_addr, cvr->server_port);
+    if (cvr->server_fd > 0) {
         LOG(LOG_INFO, "Connected to CVR server\n");
-        // config->server_status;
+        // cvr->server_status;
         return 0;
     }
     LOG(LOG_ERROR, "Connect to CVR server failure\n");
     return -1;
 }
 
-int disconnect_server(struct cvr_setting *config) {
-    if (config->server_fd > 0) {
-        close(config->server_fd);
+int disconnect_server(CVR *cvr) {
+    if (cvr->server_fd > 0) {
+        close(cvr->server_fd);
     }
     return 0;
 }
 
 void *run(void *data) {
     int r = 0;
-    struct cvr_setting *config = (struct cvr_setting *)data;
+    CVR *cvr = (CVR *)data;
 
-    if (config == NULL) {
+    if (cvr == NULL) {
         LOG(LOG_FATAL, "No setting pass to run server\n");
         return NULL;
     }
@@ -128,43 +128,43 @@ void *run(void *data) {
         struct timeval tv;
         tv.tv_sec = 1;
         tv.tv_usec = 0;
-        if (config->ipcam_fd <= 0) {
-            connect_ipcam(config);
+        if (cvr->ipcam_fd <= 0) {
+            connect_ipcam(cvr);
         }
-        if (config->server_fd <= 0) {
-            if (config->ipcam_status == 1) { //when ipcam already running
-                disconnect_ipcam(config);
+        if (cvr->server_fd <= 0) {
+            if (cvr->ipcam_status == 1) { //when ipcam already running
+                disconnect_ipcam(cvr);
             }
-            if (connect_server(config) == 0) {
-                send_http_post(config);
+            if (connect_server(cvr) == 0) {
+                send_http_post(cvr);
             }
         }
         int max = 0;
         FD_ZERO(&fs);
-        if (config->ipcam_fd > 0) {
-            FD_SET(config->ipcam_fd, &fs);
-            max = max > config->ipcam_fd ? max : config->ipcam_fd;
+        if (cvr->ipcam_fd > 0) {
+            FD_SET(cvr->ipcam_fd, &fs);
+            max = max > cvr->ipcam_fd ? max : cvr->ipcam_fd;
         }
-        if (config->server_fd > 0) {
-            FD_SET(config->server_fd, &fs);
-            max = max > config->server_fd ? max : config->server_fd;
+        if (cvr->server_fd > 0) {
+            FD_SET(cvr->server_fd, &fs);
+            max = max > cvr->server_fd ? max : cvr->server_fd;
         }
         int ret = select(max + 1, &fs, NULL, NULL, &tv);
         if (ret == 0) {
             LOG(LOG_DEBUG, "timeout\n");
         } else {
-            if (FD_ISSET(config->ipcam_fd, &fs)) {
+            if (FD_ISSET(cvr->ipcam_fd, &fs)) {
                 //read from ipcam
                 memset(buf, 0, 4096);
-                int len = recv(config->ipcam_fd, buf, 4096, 0);
+                int len = recv(cvr->ipcam_fd, buf, 4096, 0);
                 //LOG(LOG_DEBUG, "Read from ipcam %d bytes:\n%s\n", len, buf);
-                send(config->server_fd, buf, len, 0);
+                send(cvr->server_fd, buf, len, 0);
             }
-            if (FD_ISSET(config->server_fd, &fs)) {
+            if (FD_ISSET(cvr->server_fd, &fs)) {
                 memset(buf, 0, 4096);
-                int len = recv(config->server_fd, buf, 4096, 0);
+                int len = recv(cvr->server_fd, buf, 4096, 0);
                 //LOG(LOG_DEBUG, "Read from server %d bytes:\n%s\n", len, buf);
-                send(config->ipcam_fd, buf, len, 0);
+                send(cvr->ipcam_fd, buf, len, 0);
                 //read from ipcam
             }
         }
@@ -175,7 +175,7 @@ void *run(void *data) {
 int main(int argc, char *argv[]) {
     LOG(LOG_INFO, "Start camforder...\n");
 
-    struct cvr_setting cvr;
+    CVR cvr;
     memset(&cvr, 0, sizeof(cvr));
 
     char param;
