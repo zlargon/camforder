@@ -3,9 +3,12 @@
 #include <string.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "noly.h"
 #include "log.h"
+
+#define BUF_LEN 4096
 
 typedef struct {
     int                 server_fd;
@@ -113,63 +116,80 @@ int disconnect_server(CVR *cvr) {
     return 0;
 }
 
-void *run(void *data) {
-    int r = 0;
-    CVR *cvr = (CVR *)data;
-
+int run(CVR *cvr) {
     if (cvr == NULL) {
         LOG(LOG_FATAL, "No setting pass to run server\n");
-        return NULL;
+        return -1;
     }
 
-    fd_set fs;
-    while (1) {
-        char buf[4096];
-        struct timeval tv;
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
+    for (;;) {
+        // first time
         if (cvr->ipcam_fd <= 0) {
             connect_ipcam(cvr);
-        }
-        if (cvr->server_fd <= 0) {
-            if (cvr->ipcam_status == 1) { //when ipcam already running
+
+            if (cvr->ipcam_status == 1) { // when ipcam already running
                 disconnect_ipcam(cvr);
             }
+
             if (connect_server(cvr) == 0) {
                 send_http_post(cvr);
             }
         }
-        int max = 0;
+
+        // config FD set, and get the max fd
+        fd_set fs;
         FD_ZERO(&fs);
+        int max = 0;
         if (cvr->ipcam_fd > 0) {
             FD_SET(cvr->ipcam_fd, &fs);
             max = max > cvr->ipcam_fd ? max : cvr->ipcam_fd;
         }
+
         if (cvr->server_fd > 0) {
             FD_SET(cvr->server_fd, &fs);
             max = max > cvr->server_fd ? max : cvr->server_fd;
         }
+
+        // config timeval
+        struct timeval tv;
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+
+        // select
         int ret = select(max + 1, &fs, NULL, NULL, &tv);
+
+        /* 1. select = 0, timeout */
         if (ret == 0) {
             LOG(LOG_DEBUG, "timeout\n");
-        } else {
-            if (FD_ISSET(cvr->ipcam_fd, &fs)) {
-                //read from ipcam
-                memset(buf, 0, 4096);
-                int len = recv(cvr->ipcam_fd, buf, 4096, 0);
-                //LOG(LOG_DEBUG, "Read from ipcam %d bytes:\n%s\n", len, buf);
-                send(cvr->server_fd, buf, len, 0);
-            }
-            if (FD_ISSET(cvr->server_fd, &fs)) {
-                memset(buf, 0, 4096);
-                int len = recv(cvr->server_fd, buf, 4096, 0);
-                //LOG(LOG_DEBUG, "Read from server %d bytes:\n%s\n", len, buf);
-                send(cvr->ipcam_fd, buf, len, 0);
-                //read from ipcam
-            }
+            continue;
+        }
+
+        /* 2. select < 0, TODO: implement the error handle */
+        if (ret < 0) {
+            LOG(LOG_ERROR, "errno %s (%d)\n", strerror(errno), errno);
+            return -1;
+        }
+
+        /* 3. select > 0 */
+
+        // forward ipcam_fd to server_fd
+        if (FD_ISSET(cvr->ipcam_fd, &fs)) {
+            char buf[BUF_LEN] = {0};
+            int len = recv(cvr->ipcam_fd, buf, BUF_LEN, 0);
+            // LOG(LOG_DEBUG, "Read from ipcam %d bytes:\n%s\n", len, buf);
+            send(cvr->server_fd, buf, len, 0);
+        }
+
+        // forward server_fd to ipcam_fd
+        if (FD_ISSET(cvr->server_fd, &fs)) {
+            char buf[BUF_LEN] = {0};
+            int len = recv(cvr->server_fd, buf, BUF_LEN, 0);
+            // LOG(LOG_DEBUG, "Read from server %d bytes:\n%s\n", len, buf);
+            send(cvr->ipcam_fd, buf, len, 0);
         }
     }
-    return NULL;
+
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
