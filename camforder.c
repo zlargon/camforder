@@ -27,10 +27,10 @@ struct cvr_setting {
 
 static struct cvr_setting cvr;
 
-void send_http_post(int fd) {
+void send_http_post(struct cvr_setting *setting) {
     char http_post[1024];
     char body[256];
-    int len = sprintf(body, "HOST=%s&PORT=%d&PATH=%s&ID=%s&UID=%s", cvr.ipcam_addr, cvr.ipcam_port, cvr.rtsp_path, cvr.device_id, cvr.uid);
+    int len = sprintf(body, "HOST=%s&PORT=%d&PATH=%s&ID=%s&UID=%s", setting->ipcam_addr, setting->ipcam_port, setting->rtsp_path, setting->device_id, setting->uid);
     printf("%s\n", body);
     int tlen = sprintf(http_post, "POST /info HTTP/1.0\r\nCSeq: 1\r\nUser-Agent: Camforder\r\n"
             "x-sessioncookie: d4db051ca2ceb40be4c2958\r\n"
@@ -42,7 +42,7 @@ void send_http_post(int fd) {
     char *ptr = http_post + tlen;
     memcpy(ptr, body, len);
     printf("%s\n", http_post);
-    send(fd, http_post, len + tlen, 0);
+    send(setting->server_fd, http_post, len + tlen, 0);
 }
 
 int config_checking(struct cvr_setting *setting) {
@@ -140,7 +140,7 @@ void *run(void *data) {
                 disconnect_ipcam(config);
             }
             if (connect_server(config) == 0) {
-                send_http_post(config->server_fd);
+                send_http_post(config);
             }
         }
         int max = 0;
