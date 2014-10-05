@@ -44,25 +44,33 @@ void send_http_post(CVR *cvr) {
     send(cvr->server_fd, http_post, len + tlen, 0);
 }
 
-int config_checking(CVR *cvr) {
-    int ret = 0;
-    if (strlen(cvr->server_addr) == 0) {
-        LOG(LOG_ERROR, "Server address should not empty\n");
-        ret = -1;
+int crv_check_config(CVR *cvr) {
+    if (cvr == NULL) {
+        LOG(LOG_ERROR, "CVR should not be NULL\n");
+        return -1;
     }
-    if (cvr->server_port == 0 || cvr->server_port > 65534) {
-        LOG(LOG_ERROR, "Server port out of range\n");
-        ret = -1;
+
+    if (cvr->server_addr == NULL || strlen(cvr->server_addr) <= 0) {
+        LOG(LOG_ERROR, "Server address should not be NULL or empty\n");
+        return -1;
     }
-    if (strlen(cvr->ipcam_addr) == 0) {
-        LOG(LOG_ERROR, "Media address should not empty\n");
-        ret = -1;
+
+    if (cvr->server_port < 1 || cvr->server_port > 65535) {
+        LOG(LOG_ERROR, "Server port (%d) is out of range 1 ~ 65535\n", cvr->server_port);
+        return -1;
     }
-    if (cvr->ipcam_port == 0 || cvr->ipcam_port > 65534) {
-        LOG(LOG_ERROR, "Media port out of range\n");
-        ret = -1;
+
+    if (cvr->ipcam_addr == NULL || strlen(cvr->ipcam_addr) <= 0) {
+        LOG(LOG_ERROR, "Media address should not be NULL or empty\n");
+        return -1;
     }
-    return ret;
+
+    if (cvr->ipcam_port < 1 || cvr->ipcam_port > 65535) {
+        LOG(LOG_ERROR, "Media port (%d) is out of range 1 ~ 65535\n", cvr->ipcam_port);
+        return -1;
+    }
+
+    return 0;
 }
 
 void dump_config(CVR *cvr) {
@@ -230,7 +238,7 @@ int main(int argc, char *argv[]) {
     }
 
     dump_config(&cvr);
-    if (config_checking(&cvr) == -1) {
+    if (crv_check_config(&cvr) == -1) {
         LOG(LOG_FATAL, "camera forwarder setting error\n");
         return -1;
     }
