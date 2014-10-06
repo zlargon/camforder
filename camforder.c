@@ -86,13 +86,13 @@ void print_usage(char *prog) {
 
 int connect_ipcam(CVR *cvr) {
     cvr->ipcam_fd = noly_tcp_connect(cvr->ipcam_addr, cvr->ipcam_port);
-    if (cvr->ipcam_fd > 0) {
-        LOG(LOG_INFO, "Connected to IPCAM\n");
-        // cvr->ipcam_status;
-        return 0;
+    if (cvr->ipcam_fd == -1) {
+        LOG(LOG_ERROR, "Connect to IPCAM failure\n");
+        return -1;
     }
-    LOG(LOG_ERROR, "Connect to IPCAM failure\n");
-    return -1;
+
+    LOG(LOG_INFO, "Connected to IPCAM success\n");
+    return 0;
 }
 
 int disconnect_ipcam(CVR *cvr) {
@@ -104,13 +104,13 @@ int disconnect_ipcam(CVR *cvr) {
 
 int connect_server(CVR *cvr) {
     cvr->server_fd = noly_tcp_connect(cvr->server_addr, cvr->server_port);
-    if (cvr->server_fd > 0) {
-        LOG(LOG_INFO, "Connected to CVR server\n");
-        // cvr->server_status;
-        return 0;
+    if (cvr->server_fd == -1) {
+        LOG(LOG_ERROR, "Connect to CVR server failure\n");
+        return -1;
     }
-    LOG(LOG_ERROR, "Connect to CVR server failure\n");
-    return -1;
+
+    LOG(LOG_INFO, "Connected to CVR server success\n");
+    return 0;
 }
 
 int disconnect_server(CVR *cvr) {
