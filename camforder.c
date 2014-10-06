@@ -20,10 +20,6 @@ typedef struct {
     char                device_id[32];
     char                rtsp_path[64];
     char                uid[32];
-    struct sockaddr_in  saddr;
-    struct sockaddr_in  maddr;
-    int                 ipcam_status;
-    int                 server_status;
 } CVR;
 
 void send_http_post(CVR *cvr) {
@@ -130,20 +126,15 @@ int run(CVR *cvr) {
         return -1;
     }
 
+    // connect ipcam and CVR server
+    if (connect_ipcam(cvr) != 0 || connect_server(cvr) != 0) {
+        return -1;
+    }
+
+    // http post
+    send_http_post(cvr);
+
     for (;;) {
-        // first time
-        if (cvr->ipcam_fd <= 0) {
-            connect_ipcam(cvr);
-
-            if (cvr->ipcam_status == 1) { // when ipcam already running
-                disconnect_ipcam(cvr);
-            }
-
-            if (connect_server(cvr) == 0) {
-                send_http_post(cvr);
-            }
-        }
-
         // config FD set, and get the max fd
         fd_set fs;
         FD_ZERO(&fs);
