@@ -23,21 +23,36 @@ typedef struct {
 } CVR;
 
 void send_http_post(CVR *cvr) {
-    char http_post[1024];
-    char body[256];
-    int len = sprintf(body, "HOST=%s&PORT=%d&PATH=%s&ID=%s&UID=%s", cvr->ipcam_addr, cvr->ipcam_port, cvr->rtsp_path, cvr->device_id, cvr->uid);
-    printf("%s\n", body);
-    int tlen = sprintf(http_post, "POST /info HTTP/1.0\r\nCSeq: 1\r\nUser-Agent: Camforder\r\n"
-            "x-sessioncookie: d4db051ca2ceb40be4c2958\r\n"
-            "Accept: application/x-rtsp-tunnelled\r\n"
-            "Pragma: no-cache\r\n"
-            "Cache-Control: no-cache\r\n"
-            "Content-Length:%d\r\n"
-            "\r\n", len);
-    char *ptr = http_post + tlen;
-    memcpy(ptr, body, len);
+    char http_post[2048] = {0};
+
+    // set body, and get the length
+    char body[256] = {0};
+    int body_len = sprintf(body, "HOST=%s&PORT=%d&PATH=%s&ID=%s&UID=%s", cvr->ipcam_addr, cvr->ipcam_port, cvr->rtsp_path, cvr->device_id, cvr->uid);
+
+    // set header to http_post
+    int header_len = sprintf(http_post,
+        "POST /info HTTP/1.0\r\n"
+        "CSeq: 1\r\n"
+        "User-Agent: Camforder\r\n"
+        "x-sessioncookie: d4db051ca2ceb40be4c2958\r\n"
+        "Accept: application/x-rtsp-tunnelled\r\n"
+        "Pragma: no-cache\r\n"
+        "Cache-Control: no-cache\r\n"
+        "Content-Length:%d\r\n"
+        "\r\n",
+        body_len
+    );
+
+    // set body to http_post
+    memcpy(http_post + header_len, body, body_len);
+
+    printf("\n\nHTTP Post Content (length = %d)\n", header_len + body_len);
+    puts("=====================================================================");
     printf("%s\n", http_post);
-    send(cvr->server_fd, http_post, len + tlen, 0);
+    puts("=====================================================================\n");
+
+    // send http post
+    send(cvr->server_fd, http_post, header_len + body_len, 0);
 }
 
 int crv_check_config(CVR *cvr) {
